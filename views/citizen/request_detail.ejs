@@ -1,0 +1,162 @@
+<%- include('../partials/header') %>
+
+<section class="req-hero">
+  <div class="container req-hero-inner">
+    <div class="req-hero-copy">
+      <h1 class="req-title"><%= detail.service_name %></h1>
+
+      <% 
+        const s = (detail.status || '').toLowerCase();
+        const badge =
+          s.includes('approve') ? 'green' :
+          s.includes('pending') || s.includes('review') ? 'amber' :
+          s.includes('reject') || s.includes('denied') ? 'red' : 'info';
+      %>
+
+      <div class="req-meta">
+        <span class="badge <%= badge %>"><%= detail.status %></span>
+        <% if (detail.fee_cents > 0) { %>
+          <span class="fee">Payment: $<%= (detail.fee_cents/100).toFixed(2) %> <em>(Simulated)</em></span>
+        <% } %>
+        <span class="created">Created: <%= new Date(detail.created_at).toLocaleString() %></span>
+      </div>
+    </div>
+
+    <div class="req-hero-img">
+      <img src="/img/citizen-hero.jpg" alt="Request details illustration">
+    </div>
+  </div>
+</section>
+
+<section class="container req-grid">
+  <!-- LEFT: Form Data -->
+  <article class="card">
+    <div class="card-header">
+      <h3>Form Data</h3>
+    </div>
+
+    <div class="tabs">
+      <input type="radio" name="fd-tabs" id="tab-form" class="tab-input" checked>
+      <label for="tab-form" class="tab-label">Form</label>
+
+      <input type="radio" name="fd-tabs" id="tab-json" class="tab-input">
+      <label for="tab-json" class="tab-label">JSON</label>
+
+      <div class="tab-panels">
+        <!-- Form view -->
+        <section class="tab-panel">
+          <% 
+            const fd = detail.form_data || {};
+            const entries = Object.entries(fd);
+            const fmtVal = (v) => {
+              if (v === null || typeof v === 'undefined') return '<span class="muted">—</span>';
+              if (typeof v === 'boolean') return v ? '<span class="badge ok">Yes</span>' : '<span class="badge bad">No</span>';
+              if (Array.isArray(v)) return v.length ? v.join(', ') : '<span class="muted">[]</span>';
+              if (typeof v === 'object') return '<pre class="mini-json">'+JSON.stringify(v, null, 2)+'</pre>';
+              return String(v);
+            };
+          %>
+
+          <% if (!entries.length) { %>
+            <div class="empty">No form fields provided.</div>
+          <% } else { %>
+            <div class="form-preview">
+              <% entries.forEach(([k, v]) => { %>
+                <div class="fp-row">
+                  <div class="fp-label"><%= k.replace(/_/g,' ') %></div>
+                  <div class="fp-value"><%- fmtVal(v) %></div>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+        </section>
+
+        <!-- JSON view -->
+        <section class="tab-panel">
+          <div class="code-wrap">
+            <pre id="formJson" class="code-block"><%= JSON.stringify(detail.form_data, null, 2) %></pre>
+          </div>
+          <div class="panel-actions">
+            <button class="btn outline small" id="copyJsonBtn" type="button">Copy JSON</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </article>
+
+  <!-- RIGHT: Documents + Upload -->
+  <aside class="side">
+    <div class="card">
+      <div class="card-header small-head">
+        <h4>Documents</h4>
+      </div>
+
+      <ul class="doc-list">
+        <% if (docs.length === 0) { %>
+          <li class="doc empty">No documents uploaded.</li>
+        <% } %>
+        <% docs.forEach(d => { 
+             const mt = (d.mime_type || '').toLowerCase();
+             const icon = mt.includes('pdf') ? '📄' :
+                          mt.includes('image') ? '🖼' :
+                          mt.includes('word') || mt.includes('doc') ? '📝' :
+                          mt.includes('zip') ? '🗜' : '📎';
+        %>
+          <li class="doc">
+            <span class="doc-ico"><%= icon %></span>
+            <a href="<%= d.path %>" target="_blank" class="doc-link"><%= d.original_name %></a>
+            <small class="doc-meta"><%= d.mime_type %></small>
+          </li>
+        <% }) %>
+      </ul>
+
+      <form class="uploader" id="uploadForm" method="POST" enctype="multipart/form-data" action="/citizen/requests/<%= detail.id %>/upload">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="dropzone" id="dropzone">
+          <input type="file" name="document" id="fileInput" required>
+          <span class="dz-ico">⬆️</span>
+          <span class="dz-text">
+            Drag & drop a file here, or <strong>browse</strong>
+          </span>
+          <span class="dz-sub">PDF, images, or documents</span>
+        </label>
+        <div class="actions">
+          <button class="btn primary small" type="submit">Upload</button>
+        </div>
+      </form>
+    </div>
+  </aside>
+</section>
+
+<script>
+  // Copy JSON
+  document.getElementById('copyJsonBtn')?.addEventListener('click', () => {
+    const pre = document.getElementById('formJson');
+    const text = pre?.innerText || '';
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyJsonBtn');
+      const old = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = old, 1200);
+    });
+  });
+
+  // Drag & drop for uploader
+  const dz = document.getElementById('dropzone');
+  const fi = document.getElementById('fileInput');
+  if (dz && fi) {
+    ['dragenter','dragover'].forEach(evt => dz.addEventListener(evt, e => {
+      e.preventDefault(); e.stopPropagation(); dz.classList.add('hover');
+    }));
+    ['dragleave','drop'].forEach(evt => dz.addEventListener(evt, e => {
+      e.preventDefault(); e.stopPropagation(); dz.classList.remove('hover');
+    }));
+    dz.addEventListener('drop', e => {
+      const f = e.dataTransfer.files?.[0];
+      if (f) fi.files = e.dataTransfer.files;
+    });
+    dz.addEventListener('click', () => fi.click());
+  }
+</script>
+
+<%- include('../partials/footer') %>

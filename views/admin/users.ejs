@@ -1,0 +1,114 @@
+<%- include('../partials/header') %>
+
+<section class="container users-page">
+
+  <!-- Page head -->
+  <div class="page-head">
+    <h1>Users</h1>
+    <p class="muted">Search, filter and manage user roles.</p>
+  </div>
+
+  <!-- Main card -->
+  <div class="card shadow-sm">
+
+    <!-- Card header: tools -->
+    <div class="card-header">
+      <div class="card-title"><h3>User Directory</h3></div>
+
+      <div class="card-tools">
+        <form class="inline-form" method="get" action="/admin/users">
+          <input type="search" name="q" class="input" placeholder="Search by name or email…" value="<%= q || '' %>" aria-label="Search users">
+          <select name="role" class="input" aria-label="Filter by role">
+            <option value="">All roles</option>
+            <option value="ADMIN"   <%= role === 'ADMIN'   ? 'selected' : '' %>>Admin</option>
+            <option value="OFFICER" <%= role === 'OFFICER' ? 'selected' : '' %>>Officer</option>
+            <option value="CITIZEN" <%= role === 'CITIZEN' ? 'selected' : '' %>>Citizen</option>
+          </select>
+          <button class="btn outline" type="submit">Apply</button>
+          <a class="btn" href="/admin/users">Clear</a>
+        </form>
+
+        <div class="tool-actions">
+          <a class="btn primary" href="/admin/users/new">+ New user</a>
+          <a class="btn outline" href="/admin/users/export?format=csv">Export CSV</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card body -->
+    <div class="card-body">
+      <% if (!users || users.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-illustration">👥</div>
+          <h4>No users found</h4>
+          <p class="muted">Try changing filters or add a new user.</p>
+          <div class="actions">
+            <a class="btn primary" href="/admin/users/new">Add user</a>
+            <a class="btn outline" href="/admin/users">Show all</a>
+          </div>
+        </div>
+      <% } else { %>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th class="t-center">Role</th>
+                <th class="t-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach(u => {
+                   const name = u.full_name || 'Unnamed';
+                   const initials = name.trim().split(/\s+/).slice(0,2).map(s => (s[0]||'').toUpperCase()).join('');
+                   const roleName = (u.role || '').toUpperCase();
+                   const roleClass =
+                     roleName === 'ADMIN'   ? 'badge red'   :
+                     roleName === 'OFFICER' ? 'badge blue'  :
+                     roleName === 'CITIZEN' ? 'badge green' : 'badge gray';
+              %>
+                <tr>
+                  <td>
+                    <div class="user-cell">
+                      <div class="avatar"><%= initials %></div>
+                      <div class="meta">
+                        <div class="name"><%= name %></div>
+                        <div class="sub muted">#<%= u.id %></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><a class="link" href="mailto:<%= u.email %>"><%= u.email %></a></td>
+                  <td class="t-center"><span class="<%= roleClass %>"><%= roleName %></span></td>
+                  <td class="t-right">
+                    <div class="row-actions">
+                      <a class="btn tiny outline" href="/admin/users/<%= u.id %>">View</a>
+                      <a class="btn tiny outline" href="/admin/users/<%= u.id %>/edit">Edit</a>
+                      <form method="post" action="/admin/users/<%= u.id %>?_method=DELETE" class="inline" onsubmit="return confirm('Delete this user?');">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="btn tiny danger">Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+
+        <% if (typeof total_pages !== 'undefined' && total_pages > 1) { %>
+          <nav class="pagination">
+            <% const p = Number(page || 1); %>
+            <a class="btn tiny <%= p <= 1 ? 'disabled' : '' %>" href="?q=<%= encodeURIComponent(q||'') %>&role=<%= encodeURIComponent(role||'') %>&page=<%= Math.max(1, p-1) %>">Prev</a>
+            <span class="muted">Page <%= p %> of <%= total_pages %></span>
+            <a class="btn tiny <%= p >= total_pages ? 'disabled' : '' %>" href="?q=<%= encodeURIComponent(q||'') %>&role=<%= encodeURIComponent(role||'') %>&page=<%= Math.min(total_pages, p+1) %>">Next</a>
+          </nav>
+        <% } %>
+
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

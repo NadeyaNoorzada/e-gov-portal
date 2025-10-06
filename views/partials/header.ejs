@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>E-Gov Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Font: Inter -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="/css/portal.css" rel="stylesheet" />
+</head>
+<body>
+
+<header class="site-header glass">
+  <div class="container header-inner">
+    <a href="/" class="brand">MS.GOV</a>
+
+    <button class="nav-toggle" aria-label="Toggle navigation" onclick="document.getElementById('mainNav').classList.toggle('open'); this.classList.toggle('open');">
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav class="nav" id="mainNav">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/services" class="nav-link">Services</a>
+      <% if (!currentUser) { %>
+        <a href="/login" class="nav-link">Login</a>
+      <% } %>
+    </nav>
+
+    <% if (currentUser) { %>
+      <div class="user">
+        <span class="hi">Hi, <%= currentUser.full_name %></span>
+        <form method="POST" action="/logout">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn-out" type="submit">Logout</button>
+        </form>
+      </div>
+    <% } %>
+  </div>
+</header>
+
+<main class="page">

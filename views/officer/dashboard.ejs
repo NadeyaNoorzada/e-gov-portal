@@ -1,0 +1,68 @@
+<%- include('../partials/header') %>
+
+<section class="ofc-wrap">
+  <header class="ofc-head">
+    <h2 class="ofc-title">Review Queue</h2>
+  </header>
+
+  <div class="ofc-card">
+    <% if (queue.length === 0) { %>
+      <div class="ofc-empty">
+        <div class="ofc-empty-emoji">📭</div>
+        <div class="ofc-empty-title">No pending requests</div>
+        <div class="ofc-empty-sub">Everything looks quiet for now.</div>
+      </div>
+    <% } else { %>
+      <div class="ofc-table-wrap">
+        <table class="ofc-table">
+          <thead>
+            <tr>
+              <th>Citizen</th>
+              <th>Service</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th class="ofc-ta-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% queue.forEach(r => { %>
+              <tr>
+                <td class="ofc-ellipsis" data-label="Citizen"><%= r.citizen_name %></td>
+                <td class="ofc-ellipsis" data-label="Service"><%= r.service_name %></td>
+                <td data-label="Status">
+                  <span class="ofc-badge
+                    <% if (r.status === 'APPROVED') { %> ofc-badge-ok
+                    <% } else if (r.status === 'REJECTED') { %> ofc-badge-bad
+                    <% } else if (r.status === 'UNDER_REVIEW') { %> ofc-badge-warn
+                    <% } else { %> ofc-badge-neutral <% } %>">
+                    <%= r.status %>
+                  </span>
+                </td>
+                <td data-label="Created"><%= new Date(r.created_at).toLocaleString() %></td>
+                <td class="ofc-ta-right" data-label="Action">
+                  <a class="ofc-btn ofc-btn-primary" href="/officer/requests/<%= r.id %>">Open</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+        <nav class="ofc-pager">
+          <a class="ofc-page <%= page === 1 ? 'disabled' : '' %>"
+             href="?page=<%= page - 1 %>&size=<%= size %>">Prev</a>
+
+          <span class="ofc-page-info">
+            Page <%= page %> / <%= totalPages %> • <%= total %> items
+          </span>
+
+          <a class="ofc-page <%= page === totalPages ? 'disabled' : '' %>"
+             href="?page=<%= page + 1 %>&size=<%= size %>">Next</a>
+        </nav>
+      <% } %>
+    <% } %>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

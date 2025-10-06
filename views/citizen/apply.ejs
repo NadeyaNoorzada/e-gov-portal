@@ -1,0 +1,63 @@
+<%- include('../partials/header') %>
+
+<section class="apply-hero">
+  <div class="container apply-grid">
+    <!-- Illustration / Side panel -->
+    <aside class="apply-side">
+      <img src="/img/apply-side.jpg" alt="Apply for a service">
+      <div class="apply-side-copy">
+        <h2>Apply for a Service</h2>
+        <p class="muted">Choose your service, enter your details, and submit your request online.</p>
+        <ul class="tips">
+          <li>Have your National ID ready.</li>
+          <li>Use a reachable phone number.</li>
+          <li>Describe any special notes briefly.</li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Form card -->
+    <div class="form-card apply-card">
+      <form method="POST" action="/citizen/apply" class="form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <label>
+          <span>Service</span>
+          <select name="service_id" required>
+            <% services.forEach(s => { %>
+              <option value="<%= s.id %>">
+                <%= s.department_name %> — <%= s.name %>
+                <% if (s.fee_cents>0){ %>
+                  (Fee: $<%= (s.fee_cents/100).toFixed(2) %>)
+                <% } %>
+              </option>
+            <% }) %>
+          </select>
+        </label>
+
+        <div class="grid-2">
+          <label>
+            <span>National ID</span>
+            <input name="national_id" required>
+          </label>
+          <label>
+            <span>Phone</span>
+            <input name="phone" required>
+          </label>
+        </div>
+
+        <label>
+          <span>Notes (optional)</span>
+          <textarea name="notes" rows="3" placeholder="Anything we should know?"></textarea>
+        </label>
+
+        <div class="actions">
+          <a href="/citizen" class="btn outline">Cancel</a>
+          <button class="btn primary">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

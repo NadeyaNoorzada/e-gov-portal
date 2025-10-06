@@ -1,0 +1,104 @@
+<%- include('../partials/header') %>
+
+<!-- Top banner hero with image -->
+<section class="dash-hero">
+  <div class="container dash-hero-inner">
+    <div class="dash-hero-copy">
+      <h1>My Requests</h1>
+      <p class="muted">View the status of your applications and pick up where you left off.</p>
+      <a class="btn primary" href="/citizen/apply">Apply for a Service</a>
+    </div>
+    <div class="dash-hero-img">
+      <img src="/img/citizen-hero.jpg" alt="Citizen services illustration">
+    </div>
+  </div>
+</section>
+
+<section class="container dashboard-grid">
+  <!-- MAIN: Requests table -->
+  <div class="card">
+    <div class="card-header">
+      <h3>My Requests</h3>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+        <% if (myReqs.length === 0) { %>
+          <tr>
+            <td colspan="4" class="empty">No requests yet.</td>
+          </tr>
+        <% } %>
+
+        <% myReqs.forEach(r => { 
+             const s = (r.status || '').toLowerCase();
+             const badge =
+               s.includes('approve') ? 'green' :
+               s.includes('pending') || s.includes('review') ? 'amber' :
+               s.includes('reject') || s.includes('denied') ? 'red' : 'gray';
+        %>
+          <tr>
+            <td><%= r.service_name %></td>
+            <td><span class="badge <%= badge %>"><%= r.status %></span></td>
+            <td><%= new Date(r.created_at).toLocaleString() %></td>
+            <td class="t-actions">
+              <a class="btn outline small" href="/citizen/requests/<%= r.id %>">View</a>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SIDEBAR: Notifications -->
+  <aside class="sidebar">
+    <div class="card">
+      <div class="card-header small-head">
+        <h4>Notifications</h4>
+      </div>
+      <ul class="note-list">
+        <% if (notes.length === 0) { %>
+          <li class="note empty">No notifications.</li>
+        <% } %>
+        <% notes.forEach(n => { %>
+          <li class="note">
+            <span class="note-text"><%= n.message %></span>
+            <small class="note-time"><%= new Date(n.created_at).toLocaleString() %></small>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header small-head">
+        <h4>Available Services</h4>
+      </div>
+      <ul class="svc-list">
+        <% services.forEach(s => { %>
+          <li class="svc-item">
+            <div>
+              <div class="svc-title"><strong><%= s.name %></strong></div>
+              <div class="svc-meta"><%= s.department_name %>
+                <% if (s.fee_cents > 0) { %>
+                  — Fee: $<%= (s.fee_cents/100).toFixed(2) %>
+                <% } %>
+              </div>
+            </div>
+            <a class="btn outline small" href="/citizen/apply">Apply</a>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+  </aside>
+</section>
+
+<%- include('../partials/footer') %>

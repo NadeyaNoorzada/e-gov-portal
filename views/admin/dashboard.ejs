@@ -1,0 +1,163 @@
+<%- include('../partials/header') %>
+
+<!-- ===== Admin Hero ===== -->
+<section class="admin-hero">
+  <div class="container admin-hero-inner">
+    <div class="admin-hero-copy">
+      <h1>Admin Dashboard</h1>
+      <p class="muted">Monitor departments, track revenue, and jump to key tools.</p>
+
+      <div class="quick-actions">
+        <a class="btn primary" href="/admin/users">Manage Users</a>
+        <a class="btn outline" href="/admin/services">Manage Services</a>
+        <a class="btn outline" href="/admin/reports">Full Reports</a>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="admin-hero-kpis">
+      <div class="stat-card">
+        <div class="stat-label">Total Requests</div>
+        <div class="stat-value"><%= (totals?.requests || 0).toLocaleString() %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Approval Rate</div>
+        <div class="stat-value"><%= Math.round(totals?.approval_rate || 0) %>%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Collected Fees</div>
+        <div class="stat-value">$<%= ((money||0)/100).toLocaleString(undefined,{minimumFractionDigits:2}) %></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Main Grid ===== -->
+<section class="container admin-grid">
+
+  <!-- LEFT: Department Reports -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Department Reports</h3>
+
+      <div class="card-tools">
+        <form class="inline-form" method="get" action="/admin">
+          <label class="sr-only" for="q">Search department</label>
+          <input id="q" name="q" type="search" class="input" placeholder="Search…" value="<%= (q || '') %>">
+          <button class="btn small outline" type="submit">Filter</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table table-compact" aria-label="Department performance table">
+        <thead>
+          <tr>
+            <th>Department</th>
+            <th class="t-num">Total</th>
+            <th class="t-num">Approved</th>
+            <th class="t-num">Rejected</th>
+            <th class="t-num">Approval %</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!reports || reports.length === 0) { %>
+            <tr><td colspan="5" class="empty">No data found.</td></tr>
+          <% } %>
+
+          <% (reports || []).forEach(r => {
+               const total    = Number(r.total || 0);
+               const approved = Number(r.approved || 0);
+               const rejected = Number(r.rejected || 0);
+               const rate     = total ? Math.round((approved / total) * 100) : 0;
+               const badge =
+                 rate >= 75 ? 'green' :
+                 rate >= 40 ? 'amber' : 'red';
+          %>
+            <tr>
+              <td><strong><%= r.department %></strong></td>
+              <td class="t-num"><%= total.toLocaleString() %></td>
+              <td class="t-num"><%= approved.toLocaleString() %></td>
+              <td class="t-num"><%= rejected.toLocaleString() %></td>
+              <td class="t-num"><span class="badge <%= badge %>"><%= rate %>%</span></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT: Overview & Activity -->
+  <aside class="sidebar">
+
+    <!-- Overview Card -->
+    <div class="card">
+      <div class="card-header small-head">
+        <h4>Overview</h4>
+      </div>
+
+      <ul class="overview-list">
+        <li class="ovr">
+          <span>Collected fees</span>
+          <strong>$<%= ((money||0)/100).toLocaleString(undefined,{minimumFractionDigits:2}) %></strong>
+        </li>
+        <li class="ovr">
+          <span>Open requests</span>
+          <strong><%= (totals?.open_requests || 0).toLocaleString() %></strong>
+        </li>
+        <li class="ovr">
+          <span>Pending review</span>
+          <strong><%= (totals?.pending_review || 0).toLocaleString() %></strong>
+        </li>
+      </ul>
+
+      <div class="progress-block">
+        <div class="progress-head">
+          <span>Today’s throughput</span>
+          <strong><%= (totals?.today_processed || 0).toLocaleString() %></strong>
+        </div>
+        <% const p = Math.max(0, Math.min(100, Number(totals?.today_rate || 0))); %>
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= p %>">
+          <div class="progress-bar" data-p="<%= p %>"></div>
+        </div>
+        <small class="muted">Goal: 100 requests/day</small>
+      </div>
+
+      <div class="quick-links">
+        <a class="btn outline small" href="/admin/users">Manage Users</a>
+        <a class="btn outline small" href="/admin/audits">Audit Logs</a>
+        <a class="btn outline small" href="/admin/settings">Settings</a>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card">
+      <div class="card-header small-head">
+        <h4>Recent Activity</h4>
+      </div>
+      <ul class="note-list">
+        <% if (!activity || activity.length === 0) { %>
+          <li class="note empty">No recent activity.</li>
+        <% } %>
+        <% (activity || []).slice(0,6).forEach(a => { %>
+          <li class="note">
+            <span class="note-text">
+              <strong><%= a.actor %></strong> <%= a.action %>
+              <span class="muted">— <%= a.target %></span>
+            </span>
+            <small class="note-time"><%= new Date(a.created_at).toLocaleString() %></small>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+  </aside>
+</section>
+
+<script>
+  document.querySelectorAll('.progress-bar[data-p]').forEach(el => {
+    const v = Math.max(0, Math.min(100, Number(el.dataset.p || 0)));
+    el.style.width = v + '%';
+  });
+</script>
+
+<%- include('../partials/footer') %>

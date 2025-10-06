@@ -1,0 +1,33 @@
+<%- include('../partials/header') %>
+
+<section class="form-section">
+  <div class="form-card">
+    <h2 class="form-title">Register as Citizen</h2>
+    <form method="POST" action="/register" class="form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <label>
+        <span>Full name</span>
+        <input name="full_name" type="text" required>
+      </label>
+
+      <label>
+        <span>Email</span>
+        <input name="email" type="email" required>
+      </label>
+
+      <label>
+        <span>Password</span>
+        <input name="password" type="password" required>
+      </label>
+
+      <button class="btn primary w-100">Create Account</button>
+    </form>
+
+    <p class="form-footer">
+      Already have an account? <a href="/login">Log in</a>
+    </p>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

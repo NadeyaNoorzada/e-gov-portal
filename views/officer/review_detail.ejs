@@ -1,0 +1,132 @@
+<%- include('../partials/header') %>
+
+<section class="ofr-wrap">
+  <header class="ofr-head">
+    <div class="ofr-head-left">
+      <h2 class="ofr-title">Request</h2>
+      <div class="ofr-sub"><%= detail.service_name %></div>
+    </div>
+
+    <% 
+      const s = (detail.status || '').toLowerCase();
+      const badge =
+        s.includes('approve') ? 'ok' :
+        s.includes('reject')  || s.includes('denied') ? 'bad' :
+        s.includes('review')  || s.includes('pending') ? 'warn' : 'info';
+    %>
+    <div class="ofr-badges">
+      <span class="ofr-badge ofr-<%= badge %>"><%= detail.status %></span>
+    </div>
+  </header>
+
+  <div class="ofr-grid">
+    <!-- Left: Form data -->
+    <article class="ofr-card">
+      <div class="ofr-card-head">
+        <h3>Citizen &amp; Form</h3>
+      </div>
+
+      <div class="ofr-kv">
+        <div class="ofr-kv-row">
+          <div class="ofr-k-key">Citizen</div>
+          <div class="ofr-k-val"><strong><%= detail.citizen_name %></strong></div>
+        </div>
+        <div class="ofr-kv-row">
+          <div class="ofr-k-key">Created</div>
+          <div class="ofr-k-val"><%= new Date(detail.created_at).toLocaleString() %></div>
+        </div>
+      </div>
+
+      <!-- Tabs: Form / JSON -->
+      <div class="ofr-tabs">
+        <input type="radio" name="ofr-tab" id="ofr-t1" class="ofr-tab-inp" checked>
+        <label for="ofr-t1" class="ofr-tab-lbl">Form</label>
+
+        <input type="radio" name="ofr-tab" id="ofr-t2" class="ofr-tab-inp">
+        <label for="ofr-t2" class="ofr-tab-lbl">JSON</label>
+
+        <div class="ofr-panels">
+          <!-- Form view -->
+          <section class="ofr-panel">
+            <% 
+              const fd = detail.form_data || {};
+              const entries = Object.entries(fd);
+              const fmtVal = (v) => {
+                if (v === null || typeof v === 'undefined') return '<span class="ofr-muted">—</span>';
+                if (typeof v === 'boolean') return v ? '<span class="ofr-chip ok">Yes</span>' : '<span class="ofr-chip bad">No</span>';
+                if (Array.isArray(v)) return v.length ? v.join(', ') : '<span class="ofr-muted">[]</span>';
+                if (typeof v === 'object') return '<pre class="ofr-mini-json">'+JSON.stringify(v, null, 2)+'</pre>';
+                return String(v);
+              };
+            %>
+
+            <% if (!entries.length) { %>
+              <div class="ofr-empty">No form fields provided.</div>
+            <% } else { %>
+              <div class="ofr-formview">
+                <% entries.forEach(([k, v]) => { %>
+                  <div class="ofr-frow">
+                    <div class="ofr-flbl"><%= k.replace(/_/g,' ') %></div>
+                    <div class="ofr-fval"><%- fmtVal(v) %></div>
+                  </div>
+                <% }) %>
+              </div>
+            <% } %>
+          </section>
+
+          <!-- JSON view -->
+          <section class="ofr-panel">
+            <div class="ofr-code-wrap">
+              <pre class="ofr-code"><%= JSON.stringify(detail.form_data, null, 2) %></pre>
+            </div>
+          </section>
+        </div>
+      </div>
+    </article>
+
+    <!-- Right: Documents + Decision -->
+    <aside class="ofr-side">
+      <div class="ofr-card">
+        <div class="ofr-card-head small">
+          <h4>Documents</h4>
+        </div>
+
+        <ul class="ofr-docs">
+          <% if (docs.length === 0) { %>
+            <li class="ofr-doc ofr-doc-empty">No documents uploaded.</li>
+          <% } %>
+          <% docs.forEach(d => { 
+               const mt = (d.mime_type || '').toLowerCase();
+               const icon = mt.includes('pdf') ? '📄' :
+                            mt.includes('image') ? '🖼' :
+                            mt.includes('word') || mt.includes('doc') ? '📝' :
+                            mt.includes('zip') ? '🗜' : '📎';
+          %>
+            <li class="ofr-doc">
+              <span class="ofr-doc-ico"><%= icon %></span>
+              <a class="ofr-doc-link" href="<%= d.path %>" target="_blank" rel="noopener">
+                <%= d.original_name %>
+              </a>
+              <small class="ofr-doc-meta"><%= d.mime_type %></small>
+            </li>
+          <% }) %>
+        </ul>
+      </div>
+
+      <div class="ofr-card">
+        <div class="ofr-card-head small">
+          <h4>Decision</h4>
+        </div>
+        <form method="POST" action="/officer/requests/<%= detail.id %>/decision" class="ofr-decide">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="ofr-actions">
+            <button name="decision" value="APPROVED" class="ofr-btn ofr-approve" type="submit">Approve</button>
+            <button name="decision" value="REJECTED" class="ofr-btn ofr-reject"  type="submit">Reject</button>
+          </div>
+        </form>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
