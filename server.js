@@ -22,6 +22,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// ================= Proxy / HTTPS =================
+app.set('trust proxy', 1); // NEW: روی Render لازم است تا کوکی secure درست کار کند
+
 // ================= Security & utils =================
 app.use(helmet());
 app.use(morgan('dev'));
@@ -39,7 +42,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production', // در Render معمولاً true میشود
+      sameSite: 'lax', // NEW: چون SSR و همدامنهای هستی
       maxAge: 1000 * 60 * 60 * 2 // 2 hours
     }
   })
@@ -53,24 +57,18 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ================= CSRF =================
-
-// csurf middleware instance
 const csrfProtection = csrf();
 
 app.use((req, res, next) => {
   const skip = [
-    /^\/citizen\/requests\/[^/]+\/upload$/i, 
+    /^\/citizen\/requests\/[^/]+\/upload$/i,
     /^\/logout$/i,
   ];
-
-  if (skip.some(rx => rx.test(req.path))) {
-    return next(); 
-  }
-
-  return csrfProtection(req, res, next); 
+  if (skip.some(rx => rx.test(req.path))) return next();
+  return csrfProtection(req, res, next);
 });
 
-// view for all locals
+// Pass locals to views
 app.use((req, res, next) => {
   res.locals.currentUser = req.session.user || null;
   try {
@@ -90,15 +88,20 @@ app.use('/admin', adminRoutes);
 // ================= Home =================
 app.get('/', (req, res) => res.render('home'));
 
+// ============ CSRF error handler (403) ============
+app.use((err, req, res, next) => { // NEW
+  if (err && err.code === 'EBADCSRFTOKEN') {
+    console.error('CSRF error:', err.message);
+    return res.status(403).send('Invalid CSRF token');
+  }
+  return next(err);
+});
+
 // ================= Error handler =================
 app.use((err, req, res, next) => {
   console.error(err);
   const msg = err?.message || 'Something went wrong';
-  if (req.session) {
-    res.status(500).send(msg);
-  } else {
-    res.status(500).send(msg);
-  }
+  res.status(500).send(msg);
 });
 
 // ================= Server start =================
