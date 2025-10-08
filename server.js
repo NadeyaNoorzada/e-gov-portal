@@ -23,7 +23,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // ================= Security & utils =================
-app.use(helmet());
+// app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
