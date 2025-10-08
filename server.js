@@ -4,9 +4,9 @@ import { fileURLToPath } from 'url';
 import session from 'express-session';
 import pgSession from 'connect-pg-simple';
 import methodOverride from 'method-override';
-import helmet from 'helmet';
+// import helmet from 'helmet';              // ❌ موقتاً غیرفعال
 import morgan from 'morgan';
-import csrf from 'csurf';
+// import csrf from 'csurf';                 // ❌ موقتاً غیرفعال
 import dotenv from 'dotenv';
 
 import { pool } from './config/db.js';
@@ -22,87 +22,84 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// ================= Security & utils =================
-// app.use(helmet());
+// ========= Proxy / HTTPS (Render/Cloudflare) =========
+app.set('trust proxy', 1); // مهم برای کوکی secure
+
+// اگر درخواست HTTP بود، به HTTPS بفرست
+app.use((req, res, next) => {
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') return next();
+  return res.redirect('https://' + req.headers.host + req.url);
+});
+
+// ========= Security & utils =========
+// app.use(helmet());                       // ❌ موقتاً غیرفعال
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(methodOverride('_method'));
 
-// ================= Session =================
+// ========= Session =========
 const PgSession = pgSession(session);
 app.use(
   session({
-    store: new PgSession({ pool, tableName: 'session' }),
+    store: new PgSession({
+      pool,
+      tableName: 'session',
+      createTableIfMissing: true, // در صورت نبود جدول، بساز
+    }),
     secret: process.env.SESSION_SECRET || 'change_me',
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 1000 * 60 * 60 * 2 // 2 hours
-    }
+      secure: process.env.NODE_ENV === 'production', // روی Render true میشود
+      sameSite: 'lax',                                // چون SSR و همدامنهای
+      maxAge: 1000 * 60 * 60 * 2,                    // 2h
+    },
   })
 );
 
-// ================= View engine & static =================
+// ========= View engine & static =========
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-
-// Serve /public directly from root
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ================= CSRF =================
-
-// csurf middleware instance
+// ========= CSRF (غیرفعال موقت) =========
 // const csrfProtection = csrf();
-
 // app.use((req, res, next) => {
 //   const skip = [
-//     /^\/citizen\/requests\/[^/]+\/upload$/i, 
+//     /^\/citizen\/requests\/[^/]+\/upload$/i,
 //     /^\/logout$/i,
 //   ];
-
-//   if (skip.some(rx => rx.test(req.path))) {
-//     return next(); 
-//   }
-
-//   return csrfProtection(req, res, next); 
+//   if (skip.some(rx => rx.test(req.path))) return next();
+//   return csrfProtection(req, res, next);
 // });
 
-// view for all locals
+// Locals برای ویوها
 app.use((req, res, next) => {
   res.locals.currentUser = req.session.user || null;
-  try {
-    res.locals.csrfToken = req.csrfToken();
-  } catch {
-    res.locals.csrfToken = null;
-  }
+  // try { res.locals.csrfToken = req.csrfToken(); } catch { res.locals.csrfToken = null; }
   next();
 });
 
-// ================= Routes =================
+// ========= Routes =========
 app.use('/', authRoutes);
 app.use('/citizen', citizenRoutes);
 app.use('/officer', officerRoutes);
 app.use('/admin', adminRoutes);
 
-// ================= Home =================
+// ========= Home =========
 app.get('/', (req, res) => res.render('home'));
 
-// ================= Error handler =================
+// ========= Error handler =========
 app.use((err, req, res, next) => {
   console.error(err);
   const msg = err?.message || 'Something went wrong';
-  if (req.session) {
-    res.status(500).send(msg);
-  } else {
-    res.status(500).send(msg);
-  }
+  res.status(500).send(msg);
 });
 
-// ================= Server start =================
+// ========= Start =========
 const port = process.env.PORT || 3000;
-app.listen(port, () =>
-  console.log(`✅ Server running on http://localhost:${port}`)
-);
+app.listen(port, () => {
+  console.log(`✅ Server running on http://localhost:${port}`);
+});
