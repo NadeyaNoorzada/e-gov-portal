@@ -22,53 +22,56 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// ================= Proxy / HTTPS =================
-app.set('trust proxy', 1); // NEW: روی Render لازم است تا کوکی secure درست کار کند
+// ===== Proxy / HTTPS (Render) =====
+app.set('trust proxy', 1);
 
-// ================= Security & utils =================
+// ===== Security & utils =====
 app.use(helmet());
 app.use(morgan('dev'));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true })); // باید قبل از CSRF باشد
 app.use(express.json());
 app.use(methodOverride('_method'));
 
-// ================= Session =================
+// ===== Session (PG store) =====
 const PgSession = pgSession(session);
 app.use(
   session({
-    store: new PgSession({ pool, tableName: 'session' }),
+    store: new PgSession({
+      pool,
+      tableName: 'session',
+      createTableIfMissing: true, // اگر جدول session نبود، خودش میسازه
+    }),
     secret: process.env.SESSION_SECRET || 'change_me',
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // در Render معمولاً true میشود
-      sameSite: 'lax', // NEW: چون SSR و همدامنهای هستی
-      maxAge: 1000 * 60 * 60 * 2 // 2 hours
-    }
+      secure: process.env.NODE_ENV === 'production', // روی Render => true
+      sameSite: 'lax', // چون SSR و همدامنهای
+      maxAge: 1000 * 60 * 60 * 2, // 2h
+    },
   })
 );
 
-// ================= View engine & static =================
+// ===== View engine & static =====
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-
-// Serve /public directly from root
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ================= CSRF =================
+// ===== CSRF (session-based) =====
 const csrfProtection = csrf();
 
+// اگر لازم داری بعضی مسیرها CSRF نخورند، اینجا تعریف کن
 app.use((req, res, next) => {
   const skip = [
     /^\/citizen\/requests\/[^/]+\/upload$/i,
     /^\/logout$/i,
   ];
-  if (skip.some(rx => rx.test(req.path))) return next();
+  if (skip.some((rx) => rx.test(req.path))) return next();
   return csrfProtection(req, res, next);
 });
 
-// Pass locals to views
+// پاسدادن دادهها به ویوها (از جمله csrfToken)
 app.use((req, res, next) => {
   res.locals.currentUser = req.session.user || null;
   try {
@@ -79,33 +82,63 @@ app.use((req, res, next) => {
   next();
 });
 
-// ================= Routes =================
+// ===== دیباگ موقتی (کمک برای فهم وضعیت واقعی) =====
+// ببینیم توکن و سشن داریم یا نه
+app.get('/csrf-dbg', csrfProtection, (req, res) => {
+  res.json({
+    csrfToken: req.csrfToken(),
+    sessionID: req.sessionID,
+    hasUser: !!req.session.user,
+  });
+});
+// ببینیم کوکی اصلاً به سرور میرسه یا نه
+app.get('/whoami', (req, res) => {
+  res.json({
+    sessionID: req.sessionID,
+    cookieReceived: !!req.headers.cookie,
+  });
+});
+// لاگ موقتی روی مسیر لاگین (قبل از authRoutes اعمال بشه)
+app.use((req, res, next) => {
+  if (req.path === '/login') {
+    console.log(
+      `${req.method} /login sid=${req.sessionID} cookie?=${!!req.headers.cookie} _csrf-in-body?=${!!req.body?._csrf}`
+    );
+  }
+  next();
+});
+
+// ===== Routes =====
 app.use('/', authRoutes);
 app.use('/citizen', citizenRoutes);
 app.use('/officer', officerRoutes);
 app.use('/admin', adminRoutes);
 
-// ================= Home =================
+// ===== Home =====
 app.get('/', (req, res) => res.render('home'));
 
-// ============ CSRF error handler (403) ============
-app.use((err, req, res, next) => { // NEW
+// ===== CSRF error handler (403) =====
+app.use((err, req, res, next) => {
   if (err && err.code === 'EBADCSRFTOKEN') {
-    console.error('CSRF error:', err.message);
+    console.error('❌ EBADCSRFTOKEN', {
+      path: req.path,
+      method: req.method,
+      sid: req.sessionID,
+      hasCookie: !!req.headers.cookie,
+    });
     return res.status(403).send('Invalid CSRF token');
   }
   return next(err);
 });
 
-// ================= Error handler =================
+// ===== Error handler =====
 app.use((err, req, res, next) => {
-  console.error(err);
-  const msg = err?.message || 'Something went wrong';
-  res.status(500).send(msg);
+  console.error('Unexpected error:', err);
+  res.status(500).send(err?.message || 'Something went wrong');
 });
 
-// ================= Server start =================
+// ===== Start =====
 const port = process.env.PORT || 3000;
-app.listen(port, () =>
-  console.log(`✅ Server running on http://localhost:${port}`)
-);
+app.listen(port, () => {
+  console.log(`✅ Server running on http://localhost:${port}`);
+});
