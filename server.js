@@ -6,7 +6,7 @@ import pgSession from 'connect-pg-simple';
 import methodOverride from 'method-override';
 // import helmet from 'helmet';        // ❌ فعلاً غیرفعال
 import morgan from 'morgan';
-// import csrf from 'csurf';           // ❌ فعلاً غیرفعال
+import csrf from 'csurf';           // ❌ فعلاً غیرفعال
 import dotenv from 'dotenv';
 
 import { pool } from './config/db.js';
@@ -59,17 +59,18 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ========= CSRF (غیرفعال) =========
-// const csrfProtection = csrf();
-// app.use((req, res, next) => {
-//   const skip = [/^\/citizen\/requests\/[^/]+\/upload$/i, /^\/logout$/i];
-//   if (skip.some(rx => rx.test(req.path))) return next();
-//   return csrfProtection(req, res, next);
-// });
+const csrfProtection = csrf();
+app.use((req, res, next) => {
+  const skip = [/^\/citizen\/requests\/[^/]+\/upload$/i, /^\/logout$/i];
+  if (skip.some(rx => rx.test(req.path))) return next();
+  return csrfProtection(req, res, next);
+});
 
 // Locals برای ویوها (csrfToken را خالی بده تا EJS ارور نده)
 app.use((req, res, next) => {
   res.locals.currentUser = req.session.user || null;
-  res.locals.csrfToken = ''; // چون CSRF خاموشه
+  try { res.locals.csrfToken = req.csrfToken(); }
+  catch { res.locals.csrfToken = ''; }   // اگر مسیری از CSRF گذشت، خالی بماند
   next();
 });
 
