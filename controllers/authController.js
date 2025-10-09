@@ -21,7 +21,7 @@ export async function register(req, res, next) {
     const password_hash = await bcrypt.hash(password, 10);
     const user = await createUser({ email, full_name, password_hash, role: 'CITIZEN' });
 
-    // 👇 سشن را بازتولید و سپس ذخیره کن تا کوکی حتماً ست شود
+  
     req.session.regenerate(err => {
       if (err) return next(err);
 
@@ -30,7 +30,7 @@ export async function register(req, res, next) {
 
       req.session.save(err2 => {
         if (err2) return next(err2);
-        return res.redirect('/citizen/dashboard'); // مسیر داشبورد شهروند
+        return res.redirect('/citizen/dashboard'); 
       });
     });
   } catch (e) { next(e); }
@@ -52,7 +52,7 @@ export async function login(req, res, next) {
       return res.redirect('/login');
     }
 
-    // 👇 سشن تازه + ذخیره قبل از ریدایرکت
+  
     req.session.regenerate(err => {
       if (err) return next(err);
 
@@ -78,7 +78,7 @@ export async function login(req, res, next) {
 }
 
 export function logout(req, res, next) {
-  // 👇 خروج تمیز: سشن را نابود و کوکی را پاک کن
+
   req.session.destroy(err => {
     if (err) return next(err);
     res.clearCookie('connect.sid');
