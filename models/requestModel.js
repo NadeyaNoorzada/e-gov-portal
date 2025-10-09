@@ -1,6 +1,6 @@
 import { query } from '../config/db.js';
 
-// 🧾 Citizen request creation
+//  Citizen request creation
 export async function createRequest({ citizen_id, service_id, form_data }) {
   const { rows } = await query(
     `INSERT INTO requests (citizen_id, service_id, form_data)
@@ -11,7 +11,7 @@ export async function createRequest({ citizen_id, service_id, form_data }) {
   return rows[0];
 }
 
-// 👤 Citizen requests list
+// Citizen requests list
 export async function listCitizenRequests(citizen_id) {
   const { rows } = await query(
     `SELECT r.*, s.name AS service_name
@@ -24,10 +24,7 @@ export async function listCitizenRequests(citizen_id) {
   return rows;
 }
 
-/**
- * 🧭 Officer queue — paginated
- * بدون فیلتر department — همه درخواستها بر اساس نام شهروند مرتب میشوند
- */
+//Officer queue
 export async function listOfficerQueuePaged(user, limit = 20, offset = 0) {
   const params = [limit, offset];
   const { rows } = await query(
@@ -45,15 +42,13 @@ export async function listOfficerQueuePaged(user, limit = 20, offset = 0) {
   return rows;
 }
 
-/**
- * 🔢 Count total for pagination
- */
+//Count total for pagination
 export async function countOfficerRequests() {
   const { rows } = await query(`SELECT COUNT(*)::int AS total FROM requests`);
   return rows[0].total;
 }
 
-// 🧩 Request detail
+// Request detail
 export async function getRequestDetail(id) {
   const { rows } = await query(
     `SELECT
@@ -70,7 +65,7 @@ export async function getRequestDetail(id) {
   return rows[0] || null;
 }
 
-// 🔄 Update request status
+// Update request status
 export async function updateStatus(id, status, assigned_officer_id = null) {
   const { rows } = await query(
     `UPDATE requests
