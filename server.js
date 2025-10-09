@@ -4,9 +4,9 @@ import { fileURLToPath } from 'url';
 import session from 'express-session';
 import pgSession from 'connect-pg-simple';
 import methodOverride from 'method-override';
-// import helmet from 'helmet';        // ❌ فعلاً غیرفعال
+// import helmet from 'helmet';        // tempurary disabled
 import morgan from 'morgan';
-import csrf from 'csurf';           // ❌ فعلاً غیرفعال
+import csrf from 'csurf';           
 import dotenv from 'dotenv';
 
 import { pool } from './config/db.js';
@@ -26,7 +26,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 // ========= Security & utils =========
-// app.use(helmet());                 // ❌ موقتاً غیرفعال
+// app.use(helmet());                //tempurary disabled
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -39,16 +39,16 @@ app.use(
     store: new PgSession({
       pool,
       tableName: 'session',
-      createTableIfMissing: true,      // اگر جدول نبود، بساز
+      createTableIfMissing: true,  
     }),
     secret: process.env.SESSION_SECRET || 'change_me',
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // روی Render فعال میشود
-      sameSite: 'lax',                                // چون SSR و همدامنهای
-      maxAge: 1000 * 60 * 60 * 2,                    // 2h
+      secure: process.env.NODE_ENV === 'production', 
+      sameSite: 'lax',                                
+      maxAge: 1000 * 60 * 60 * 2,                    
     },
   })
 );
@@ -66,11 +66,11 @@ app.use((req, res, next) => {
   return csrfProtection(req, res, next);
 });
 
-// Locals برای ویوها (csrfToken را خالی بده تا EJS ارور نده)
+// Locals for views
 app.use((req, res, next) => {
   res.locals.currentUser = req.session.user || null;
   try { res.locals.csrfToken = req.csrfToken(); }
-  catch { res.locals.csrfToken = ''; }   // اگر مسیری از CSRF گذشت، خالی بماند
+  catch { res.locals.csrfToken = ''; }   
   next();
 });
 
